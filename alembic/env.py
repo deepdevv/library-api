@@ -4,6 +4,42 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+import os, sys
+
+from app.db.base import Base
+from app.models import book
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
+
+config = context.config
+
+db_url = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+
+####
+
+from sqlalchemy.engine.url import make_url
+
+db_url = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+if not db_url:
+    raise RuntimeError("DATABASE_URL not set and sqlalchemy.url is empty")
+
+# DEBUG: print the actual DB target (with password shown so you can verify; remove later)
+print("🔧 Alembic connecting to:", make_url(db_url).render_as_string(hide_password=False))
+
+config.set_main_option("sqlalchemy.url", db_url)
+
+
+####
+if not db_url:
+    raise RuntimeError("DATABASE_URL not set and sqlalchemy.url is empty")
+
+config.set_main_option("sqlalchemy.url", db_url)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -18,7 +54,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

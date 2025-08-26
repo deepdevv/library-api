@@ -1,0 +1,23 @@
+[project]
+name = "library-api"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Dawid Stajszczyk",email = "dawid.stajszczyk@bcf-software.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "sqlalchemy (>=2.0.43,<3.0.0)",
+    "alembic (>=1.16.4,<2.0.0)",
+    "psycopg[binary] (>=3.2.9,<4.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+python-dotenv = "^1.1.1"
+

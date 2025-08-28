@@ -9,7 +9,9 @@ from sqlalchemy import text
 from app.db.session import engine, AsyncSessionLocal
 from app.db.base import Base
 from collections.abc import AsyncGenerator
-
+from app.api.deps import get_session
+from httpx import AsyncClient, ASGITransport
+from app.main import app
 
 # --- pytest-asyncio ----------------------------------------------------------
 
@@ -49,3 +51,24 @@ async def db_session(prepare_database) -> AsyncGenerator[AsyncSession, None]:
                 await session.rollback()
             except Exception:
                 pass
+
+
+@pytest_asyncio.fixture
+async def client(db_session):
+    async def _override_get_session():
+        yield db_session
+
+    app.dependency_overrides[get_session] = _override_get_session
+
+    # Build a transport that works across httpx versions
+    try:
+        # httpx versions that support the 'lifespan' kwarg
+        transport = ASGITransport(app=app, lifespan="on")  # type: ignore[arg-type]
+    except TypeError:
+        # Older/newer variants without the kwarg
+        transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    app.dependency_overrides.clear()

@@ -1,0 +1,35 @@
+### Health
+GET http://localhost:8000/health
+
+### Create a book
+POST http://localhost:8000/api/v1/books
+Content-Type: application/json
+
+{
+  "serial_number": "000123",
+  "title": "The Docker Book",
+  "author": "Alice"
+}
+
+### List books
+GET http://localhost:8000/api/v1/books?limit=10&offset=0
+
+### Borrow the book
+PATCH http://localhost:8000/api/v1/books/000123/status
+Content-Type: application/json
+
+{
+  "action": "borrow",
+  "borrower_card": "123456"
+}
+
+### Return the book
+PATCH http://localhost:8000/api/v1/books/000123/status
+Content-Type: application/json
+
+{
+  "action": "return"
+}
+
+### Delete the book
+DELETE http://localhost:8000/api/v1/books/000123

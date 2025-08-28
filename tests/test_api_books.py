@@ -63,3 +63,40 @@ async def test_delete_book(client):
     # Delete again → 404
     r2 = await client.delete("/api/v1/books/300001")
     assert r2.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_books_with_filters(client):
+    # Create two books
+    await client.post("/api/v1/books", json={"serial_number": "400001", "title": "Alpha", "author": "Tester"})
+    await client.post("/api/v1/books", json={"serial_number": "400002", "title": "Beta", "author": "Tester"})
+
+    # Borrow one
+    await client.patch("/api/v1/books/400001/status", json={"action": "borrow", "borrower_card": "123456"})
+
+    # Filter by is_borrowed=true
+    r = await client.get("/api/v1/books", params={"is_borrowed": True})
+    assert r.status_code == 200
+    data = r.json()
+    assert all(item["is_borrowed"] for item in data["items"])
+
+    # Filter by title substring
+    r2 = await client.get("/api/v1/books", params={"title": "Beta"})
+    assert r2.status_code == 200
+    data2 = r2.json()
+    assert all("Beta" in item["title"] for item in data2["items"])
+
+
+@pytest.mark.asyncio
+async def test_error_envelope_shape_on_conflict(client):
+    # Create a book
+    payload = {"serial_number": "500001", "title": "Conflict", "author": "Z"}
+    await client.post("/api/v1/books", json=payload)
+
+    # Create again → conflict
+    r = await client.post("/api/v1/books", json=payload)
+    assert r.status_code == 409
+    body = r.json()
+    assert "error" in body
+    assert set(body["error"].keys()) == {"code", "message", "details"}
+    assert body["error"]["code"] == "conflict"

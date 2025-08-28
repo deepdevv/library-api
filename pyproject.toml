@@ -39,4 +39,5 @@ packages = [{ include = "app" }]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+addopts = "--cov=app --cov-report=term-missing --cov-fail-under=85"
 

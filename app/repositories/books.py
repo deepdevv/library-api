@@ -1,3 +1,10 @@
+"""Repository layer for book persistence.
+
+This module provides low-level data-access operations for the `Book` model.
+No business logic is applied here; that is handled in the service layer.
+"""
+
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -12,9 +19,10 @@ from sqlalchemy import and_, func, select
 
 
 class BookRepository:
-    """Data-access layer for books. No business rules here."""
+    """Data-access layer for `Book` objects."""
 
     def __init__(self, session: AsyncSession) -> None:
+        """Initialize repository with a database session."""
         self.session = session
 
     # --- helpers -------------------------------------------------------------
@@ -26,6 +34,16 @@ class BookRepository:
         title: Optional[str] = None,
         author: Optional[str] = None,
     ) -> Select:
+        """Build a SELECT statement with optional filters.
+
+        Args:
+            is_borrowed (Optional[bool]): Filter by borrow status.
+            title (Optional[str]): Case-insensitive substring filter on title.
+            author (Optional[str]): Case-insensitive substring filter on author.
+
+        Returns:
+            Select: SQLAlchemy SELECT statement.
+        """
         stmt = select(Book)
 
         if is_borrowed is not None:
@@ -44,6 +62,7 @@ class BookRepository:
     # --- CRUD ---------------------------------------------------------------
 
     async def create(self, *, serial_number: str, title: str, author: str) -> Book:
+        """Insert a new book row into the database."""
         obj = Book(
             serial_number=serial_number,
             title=title,
@@ -57,13 +76,14 @@ class BookRepository:
         return obj
 
     async def get_by_serial(self, serial_number: str) -> Optional[Book]:
+        """Retrieve a book by its serial number."""
         res = await self.session.execute(
             select(Book).where(Book.serial_number == serial_number)
         )
         return res.scalar_one_or_none()
 
     async def get_for_update(self, serial_number: str) -> Optional[Book]:
-        """Fetch a row with a FOR UPDATE lock for state transitions."""
+        """Fetch a book row with a FOR UPDATE lock (for state transitions)."""
         res = await self.session.execute(
             select(Book)
             .where(Book.serial_number == serial_number)
@@ -72,6 +92,7 @@ class BookRepository:
         return res.scalar_one_or_none()
 
     async def delete(self, serial_number: str) -> None:
+        """Delete a book by its serial number."""
         await self.session.execute(
             delete(Book).where(Book.serial_number == serial_number)
         )
@@ -85,6 +106,18 @@ class BookRepository:
         limit: int = 50,
         offset: int = 0,
     ) -> Tuple[Iterable[Book], int]:
+        """Return a page of books with optional filters and total count.
+
+        Args:
+            is_borrowed (Optional[bool]): Filter by borrow status.
+            title (Optional[str]): Case-insensitive substring filter on title.
+            author (Optional[str]): Case-insensitive substring filter on author.
+            limit (int): Maximum number of rows to return.
+            offset (int): Offset for pagination.
+
+        Returns:
+            tuple[list[Book], int]: Books matching the filters and total count.
+        """
         # filters reused for both queries
         conditions = []
         if is_borrowed is not None:
@@ -121,8 +154,19 @@ class BookRepository:
         borrower_card: Optional[str],
         borrowed_at: Optional[datetime],
     ) -> Optional[Book]:
-        """Low-level state update. Caller must enforce business rules."""
-        # We want updated_at to be touched server-side
+        """Update borrow-related fields of a book (low-level operation).
+
+        Caller is responsible for enforcing business rules.
+
+        Args:
+            serial_number (str): Book identifier.
+            is_borrowed (bool): Borrow state flag.
+            borrower_card (Optional[str]): Borrower's card (if borrowed).
+            borrowed_at (Optional[datetime]): Borrow timestamp.
+
+        Returns:
+            Optional[Book]: Updated book, or None if not found.
+        """
         stmt = (
             update(Book)
             .where(Book.serial_number == serial_number)

@@ -1,3 +1,10 @@
+"""SQLAlchemy declarative base and metadata configuration.
+
+Defines a consistent naming convention for constraints and indexes,
+and provides the declarative `Base` class for all ORM models.
+"""
+
+
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import MetaData
 
@@ -12,4 +19,5 @@ NAMING_CONVENTION = {
 metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 class Base(DeclarativeBase):
+    """Declarative base class for all ORM models."""
     metadata = metadata

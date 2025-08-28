@@ -1,3 +1,10 @@
+"""Pydantic schemas for book-related API requests and responses.
+
+These models validate request payloads, enforce domain-specific rules
+(such as six-digit identifiers), and shape the API responses.
+"""
+
+
 import re
 from datetime import datetime
 from typing import Annotated, Literal, Optional, Union
@@ -9,7 +16,10 @@ SIX_DIGIT_RE = re.compile(r"^\d{6}$")
 
 
 class BookCreate(BaseModel):
-    """Request model: create a new book (always created as available)."""
+    """Request schema for creating a new book.
+
+    Always created as available (not borrowed).
+    """
 
     serial_number: str = Field(
         ...,
@@ -19,20 +29,20 @@ class BookCreate(BaseModel):
     title: str = Field(..., description="Non-empty title.", examples=["The Pragmatic Programmer"])
     author: str = Field(..., description="Non-empty author name.", examples=["Andrew Hunt"])
 
-    # Trim whitespace on title/author and ensure not empty after trim
     @field_validator("title", "author", mode="before")
     @classmethod
     def _strip_and_require_non_empty(cls, v: str) -> str:
+        """Trim whitespace and ensure the field is non-empty."""
         if isinstance(v, str):
             v = v.strip()
         if not v:
             raise ValueError("must not be empty")
         return v
 
-    # Enforce exactly six digits for serial number
     @field_validator("serial_number")
     @classmethod
     def _validate_serial(cls, v: str) -> str:
+        """Ensure the serial number is exactly six digits."""
         if not SIX_DIGIT_RE.fullmatch(v):
             raise ValueError("must be exactly six digits")
         return v
@@ -47,7 +57,7 @@ class BookCreate(BaseModel):
 
 
 class BookRead(BaseModel):
-    """Response model: full book representation."""
+    """Response schema: full representation of a book."""
 
     serial_number: str = Field(..., description="Six-digit string identifier.")
     title: str
@@ -62,17 +72,16 @@ class BookRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    # If API returns borrower_card, ensure it's in the expected format when present
     @field_validator("borrower_card")
     @classmethod
     def _validate_card_format(cls, v: Optional[str]) -> Optional[str]:
+        """Validate borrower card format when present."""
         if v is None:
             return v
         if not SIX_DIGIT_RE.fullmatch(v):
             raise ValueError("must be exactly six digits")
         return v
 
-    # Allow creation from SQLAlchemy ORM objects via attribute access
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -92,8 +101,8 @@ class BookRead(BaseModel):
     )
 
 
-# Discriminated union for PATCH /status
 class _BorrowAction(BaseModel):
+    """Discriminator model for borrow action in status updates."""
     action: Literal["borrow"] = Field("borrow", description="Borrow the book.")
     borrower_card: str = Field(..., description="Six-digit library card number.", examples=["654321"])
 
@@ -103,30 +112,29 @@ class _BorrowAction(BaseModel):
         if not SIX_DIGIT_RE.fullmatch(v):
             raise ValueError("must be exactly six digits")
         return v
-
-    # Do not allow any extra keys (e.g., borrowed_at, is_borrowed, etc.)
+    
     model_config = ConfigDict(extra="forbid")
 
 
 class _ReturnAction(BaseModel):
+    """Discriminator model for return action in status updates."""
     action: Literal["return"] = Field("return", description="Return the book.")
 
-    # Do not allow any extra keys on return either
     model_config = ConfigDict(extra="forbid")
 
 
 BookStatusUpdate = Annotated[
     Union[_BorrowAction, _ReturnAction], Field(discriminator="action")
 ]
-"""
-Request model: update borrow status.
+"""Request schema for updating borrow status.
 
 Examples:
-- {"action": "borrow", "borrower_card": "654321"}
-- {"action": "return"}
+    - {"action": "borrow", "borrower_card": "654321"}
+    - {"action": "return"}
 """
 
 class BookListResponse(BaseModel):
+    """Response schema for a paginated list of books."""
     items: list[BookRead]
     total: int = Field(..., ge=0, description="Total number of matching books.")
 

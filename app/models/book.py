@@ -1,7 +1,35 @@
+"""ORM model for the `books` table.
+
+Defines columns, constraints, and indexes for managing library books.
+"""
+
+
 from sqlalchemy import Boolean, CheckConstraint, Column, Index, Text, CHAR, TIMESTAMP, func
 from app.db.base import Base
 
 class Book(Base):
+    """Represents a library book.
+
+    Columns:
+        serial_number (CHAR[6]): Primary key, must be exactly six digits.
+        title (Text): Book title (non-empty).
+        author (Text): Book author (non-empty).
+        is_borrowed (bool): Whether the book is currently borrowed.
+        borrower_card (CHAR[6] | None): Borrower's card number, required when borrowed.
+        borrowed_at (datetime | None): Timestamp when the book was borrowed.
+        created_at (datetime): Creation timestamp (set by DB).
+        updated_at (datetime): Last update timestamp (set by DB).
+
+    Constraints:
+        - serial_number must be six digits.
+        - borrower_card must be six digits or null.
+        - borrow state consistency:
+            * if not borrowed → borrower_card and borrowed_at must be NULL.
+            * if borrowed → borrower_card must be valid and borrowed_at not NULL.
+
+    Indexes:
+        - `idx_books_is_borrowed` on `is_borrowed` for efficient filtering.
+    """
     __tablename__ = "books"
 
     serial_number = Column(CHAR(6), primary_key=True)

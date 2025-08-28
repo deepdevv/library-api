@@ -1,3 +1,9 @@
+"""Pytest configuration and fixtures for the Library API.
+
+Provides event loop setup, database lifecycle management,
+and HTTP client utilities for async test execution.
+"""
+
 import asyncio
 import os
 
@@ -21,7 +27,10 @@ pytest_plugins = ("pytest_asyncio",)
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """Use a session-scoped event loop for async tests."""
+    """Provide a session-scoped asyncio event loop.
+
+    Ensures async tests share the same loop across the test session.
+    """
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
@@ -31,6 +40,11 @@ def event_loop():
 
 @pytest_asyncio.fixture
 async def prepare_database() -> AsyncGenerator[None, None]:
+    """Recreate database schema before each test function.
+
+    Drops and recreates all tables to ensure test isolation.
+    Disposes engine before and after to avoid cross-loop issues.
+    """
     # ensure no pooled connections from a different loop
     await engine.dispose()
     async with engine.begin() as conn:
@@ -43,6 +57,10 @@ async def prepare_database() -> AsyncGenerator[None, None]:
 
 @pytest_asyncio.fixture
 async def db_session(prepare_database) -> AsyncGenerator[AsyncSession, None]:
+    """Yield a transaction-scoped AsyncSession for tests.
+
+    Rolls back at the end of each test to keep state clean.
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -55,6 +73,11 @@ async def db_session(prepare_database) -> AsyncGenerator[AsyncSession, None]:
 
 @pytest_asyncio.fixture
 async def client(db_session):
+    """Provide an HTTPX AsyncClient bound to the FastAPI app.
+
+    Overrides the DB session dependency to use the test session.
+    Handles compatibility with multiple httpx versions.
+    """
     async def _override_get_session():
         yield db_session
 

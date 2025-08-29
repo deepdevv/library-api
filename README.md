@@ -1,5 +1,5 @@
 # library-api
-Library inventory API
+**Library inventory API** built with **FastAPI** + **SQLAlchemy (async)** + **PostgreSQL**.
 
 ## Overview
 
@@ -21,7 +21,23 @@ cp .env.example .env
 # 2) Start DB + API (migrations run automatically)
 docker compose up --build
 
-# API: http://localhost:8000  |  Docs: http://localhost:8000/docs
+# API: http://localhost:8000
+# Docs: http://localhost:8000/docs
+```
+
+## One-minute demo
+```bash
+# Add a book
+http POST :8000/api/v1/books serial_number=123456 title="Clean Code" author="Robert C. Martin"
+
+# Borrow it
+http PATCH :8000/api/v1/books/123456/status action=borrow borrower_card=654321
+
+# List borrowed books
+http GET :8000/api/v1/books is_borrowed==true
+
+# Return it
+http PATCH :8000/api/v1/books/123456/status action=return
 ```
 
 ## Run locally (no Docker)
@@ -42,8 +58,14 @@ Base path: `/api/v1`
 | PATCH  | `/books/{serial_number}/status`| Borrow: `{"action":"borrow","borrower_card":"123456"}` <br> Return: `{"action":"return"}` | `200 BookRead`                        | 404 not found, 409 invalid state, 422 validation |
 
 ## Error envelope
-```
-{ "error": { "code": "conflict|not_found|validation_error", "message": "...", "details": {} } }
+```json
+{
+ "error": {
+  "code": "conflict | not_found | validation_error",
+  "message": "...",
+  "details": {}
+ }
+}
 ```
 
 ### Acceptance checklist (mapped to the brief)
@@ -115,4 +137,5 @@ pytest --cov=app --cov-report=term-missing
 - Use ```pytest.mark.asyncio``` for async tests.
 
 - Reuse fixtures (```db_session```, ```client```) for DB/API access.
+
 

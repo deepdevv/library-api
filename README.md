@@ -15,7 +15,7 @@ Simple Library API used by staff to track books:
 
 ## Quick start (Docker)
 ```bash
-# 1) Copy env template and adjust if needed
+# 1) Copy env template
 cp .env.example .env
 
 # 2) Start DB + API (migrations run automatically)
@@ -25,19 +25,43 @@ docker compose up --build
 # Docs: http://localhost:8000/docs
 ```
 
+
 ## One-minute demo
 ```bash
 # Add a book
 http POST :8000/api/v1/books serial_number=123456 title="Clean Code" author="Robert C. Martin"
+curl -X POST http://localhost:8000/api/v1/books \
+  -H "Content-Type: application/json" \
+  -d '{"serial_number":"123456","title":"Clean Code","author":"Robert C. Martin"}'
 
 # Borrow it
 http PATCH :8000/api/v1/books/123456/status action=borrow borrower_card=654321
+curl -X PATCH http://localhost:8000/api/v1/books/123456/status \
+  -H "Content-Type: application/json" \
+  -d '{"action":"borrow","borrower_card":"654321"}'
 
 # List borrowed books
 http GET :8000/api/v1/books is_borrowed==true
+curl "http://localhost:8000/api/v1/books?is_borrowed=true"
 
 # Return it
 http PATCH :8000/api/v1/books/123456/status action=return
+curl -X PATCH http://localhost:8000/api/v1/books/123456/status \
+  -H "Content-Type: application/json" \
+  -d '{"action":"return"}'
+
+http DELETE :8000/api/v1/books/123456
+curl -X DELETE http://localhost:8000/api/v1/books/123456
+```
+## Environment variables
+All required settings are already defined in ```.env.example```.
+Just copy it to ```.env``` and you’re good to go — no edits needed for Docker Compose.
+
+### Local override (optional)
+
+If you want to run the API outside Docker (with Postgres on localhost), uncomment and adjust:
+```bash
+DATABASE_URL=postgresql+asyncpg://library:library@localhost:55432/library
 ```
 
 ## Run locally (no Docker)
@@ -137,5 +161,6 @@ pytest --cov=app --cov-report=term-missing
 - Use ```pytest.mark.asyncio``` for async tests.
 
 - Reuse fixtures (```db_session```, ```client```) for DB/API access.
+
 
 
